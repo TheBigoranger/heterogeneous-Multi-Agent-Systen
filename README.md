@@ -1,4 +1,4 @@
-# heterogeneous-Multi-Agent-Systen-simulation-
+# heterogeneous-Multi-Agent-Systen-
 Data and control synthesis for the heterogeneous MAS
 
 The agents' dynamics data and graph structure are stored in [AgentsData.m](https://github.com/TheBigoranger/heterogeneous-Multi-Agent-Systen-/blob/main/AgentsData.m)
