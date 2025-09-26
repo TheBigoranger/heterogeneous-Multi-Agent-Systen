@@ -1,22 +1,35 @@
 %% design the controller
 hete_synthesis
+% AgentsData
+% load("controlGain.mat")
 %% simulate the leader estimator
+n_0 = length(A_0);
+p = height (C1_0);
+r_0 = width(B1_0);
 t = 0:0.001:40;
-u= zeros(1,length(t));
-u(1:floor(0.1*length(t)))=1;
-u(floor(0.5*length(t)):floor(0.7*length(t)))=-1;
+omega= zeros(1,length(t));
+omega(1:floor(0.1*length(t)))=1;
+omega(floor(0.5*length(t)):floor(0.7*length(t)))=-1;
 estimateSys = ss(kron(eye(N+1),A_0)+kron(diag(sum(A,2))-A,K*C1_0),[B1_0;zeros(N*n_0,r_0)],kron(eye(N+1),eye(n_0)),zeros((N+1)*n_0,r_0));
-eta_and_x0 = lsim(estimateSys,u,t);
+eta_and_x0 = lsim(estimateSys,omega,t);
 figure(1)
 clf
 for i=1:n_0
     subplot(n_0,1,i);
     plot(t,eta_and_x0(:,i:n_0:end));
 end
-
+ylim padded
 %% simulation for DOF
 figure(2)
 clf
+% plot leader's z_0
+z_0=C1_0*eta_and_x0(:,1:n_0)';
+for j=1:n_0
+    subplot(n_0,1,j);
+    plot(t,z_0(j,:));
+    hold on
+end
+% simulate for followers
 for i = 1:max(size(A_i_data))
     A_i=A_i_data{i};
     B1_i =B1_i_data {i};
@@ -43,9 +56,20 @@ for i = 1:max(size(A_i_data))
     xi_i = exp(-1*t).*sin(i*length(t)).*ones(r_i,length(t));
     % xi_i = zeros(r_i,length(t));
     [z_i, tOut, xandxc_i]=lsim(DOFsys,[eta_and_x0(:,i*n_0+1:(i+1)*n_0),xi_i'],t);
-    for j=1:n_0
-        subplot(n_0,1,j);
-        plot(tOut,z_i(:,j:n_0:end));
+    for j=1:p
+        subplot(p,1,j);
+        plot(tOut,z_i(:,j:p:end));
         hold on
     end
+end
+% figure marks
+ylim padded
+subplot(n_0,1,1);
+legend('leader','Agent 1','Agent 2','Agent 3','Agent 4', ...
+        'Location','northoutside','NumColumns',N+1);
+for i= 1:p
+    subplot(p,1,i);
+    ylabel(['$z_' num2str(i) '^{(i)}$'],...
+        'interpreter','latex', 'FontSize',15)
+    xlabel('$t$','interpreter','latex','FontSize',15)
 end

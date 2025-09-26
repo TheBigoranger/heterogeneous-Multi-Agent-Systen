@@ -1,8 +1,19 @@
 %% leader's dynamics
 % A_0= [-0.1,-0.3;0.3,0.1];
-A_0= [0,1;0,-0.5];
+A_0= [0,1;0,-0.25];
 B1_0= [0;1];
 C1_0= [1,0;0,1];
+%%  communication graph
+A=[0,0,0,0,0; ...
+    1,0,1,1,1; ...
+    1,1,0,1,0; ...
+    0,1,1,0,1; ...
+    0,1,0,1,0];
+G = digraph(A);
+Gbar =  graph (A(2:end,2:end));
+N = length(A) -1;
+Lbar = full(Gbar.laplacian);
+H = diag(A(2:end,1)) + Lbar;
 %% follower's dynamics
 A_i_data = {...
     [1.5,2,3;

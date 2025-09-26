@@ -1,18 +1,5 @@
 %% load agents data
 AgentsData
-%% graph
-A=[0,0,0,0,0; ...
-    1,0,1,1,1; ...
-    1,1,0,1,0; ...
-    0,1,1,0,1; ...
-    0,1,0,1,0];
-G = digraph(A);
-Gbar =  graph (A(2:end,2:end));
-N = length(A) -1;
-Lbar = full(Gbar.laplacian);
-H = diag(A(2:end,1)) + Lbar;
-% figure(3)
-% plot(G)
 %% design for the estimator
 n_0 = length(A_0);
 p = height (C1_0);
@@ -21,23 +8,24 @@ P1 = sdpvar (n_0);
 lambda_min = min(eig(H));
 lambda_max = max(eig(H));
 hatK = sdpvar (n_0,p,'full');
-gamma1 = sdpvar (1);
+gamma_1 = sdpvar (1);
 lowerbound = sdpvar(1);
 constraint1 = [P1*A_0+lambda_min*hatK*C1_0+(P1*A_0+lambda_min*hatK*C1_0)',-P1*B1_0,eye(n_0);
-    -B1_0'*P1,-gamma1*eye(r_0),zeros(r_0,n_0);
-    eye(n_0),zeros(n_0,r_0),-gamma1*eye(n_0)];
+    -B1_0'*P1,-gamma_1*eye(r_0),zeros(r_0,n_0);
+    eye(n_0),zeros(n_0,r_0),-gamma_1*eye(n_0)];
 constraint2 = [P1*A_0+lambda_max*hatK*C1_0+(P1*A_0+lambda_max*hatK*C1_0)',-P1*B1_0,eye(n_0);
-    -B1_0'*P1,-gamma1*eye(r_0),zeros(r_0,n_0);
-    eye(n_0),zeros(n_0,r_0),-gamma1*eye(n_0)];
+    -B1_0'*P1,-gamma_1*eye(r_0),zeros(r_0,n_0);
+    eye(n_0),zeros(n_0,r_0),-gamma_1*eye(n_0)];
 constraint = [constraint1<=0,constraint2<=0,P1>=lowerbound*eye(n_0);lowerbound>=0];
-obj = 10*gamma1 + norm(hatK,'fro') - lowerbound;
-% obj = gamma1;
+obj = 20*gamma_1 + norm(hatK,'fro') - lowerbound;
+% obj = gamma_1;
 % ops = sdpsettings('solver','bmibnb','bmibnb.relgaptol',1e-4,'verbose',0);
 % ops = sdpsettings('solver','lmilab','verbose',1,'debug',0,'shift',1e-12);
 ops = sdpsettings('solver','mosek','verbose',0,'debug',0,'shift',1e-12);
 % ops = sdpsettings('solver','sdpt3','verbose',1,'debug',0,'shift',1e-12);
 % ops = sdpsettings('solver','sedumi','verbose',1,'debug',0,'shift',1e-12);
 optimize(constraint,obj,ops);
+gamma_1=value(gamma_1);
 hatK = value(hatK);
 P1 = value(P1);
 K = P1^-1*hatK;
@@ -48,6 +36,9 @@ Cc_i_record = {};
 Dc_i_record = {};
 Aceta_i_record = {};
 Cceta_i_record = {};
+Gamma_i_record = {};
+Pi_i_record = {};
+gamma_2_i_record = [];
 for i = 1:max(size(A_i_data))
     %% follower's dynamics
     A_i=A_i_data{i};
@@ -70,6 +61,8 @@ for i = 1:max(size(A_i_data))
     optimize(LME_i,[],ops);
     Pi_i = value(Pi_i);
     Gamma_i = value(Gamma_i);
+    Pi_i_record = [Pi_i_record,Pi_i];
+    Gamma_i_record = [Gamma_i_record, Gamma_i];
     %% solve for DOF controller
     Y_i = sdpvar(n_i);
     X_i = sdpvar(n_i);
@@ -99,7 +92,8 @@ for i = 1:max(size(A_i_data))
     % ops = sdpsettings('solver','sdpt3','verbose',1,'debug',0,'shift',1e-12);
     % ops = sdpsettings('solver','sedumi','verbose',1,'debug',0,'shift',1e-12);
     optimize(constraint,obj,ops);
-    value(gamma_2_i)
+    gamma_2_i=value(gamma_2_i);
+    gamma_2_i_record= [gamma_2_i_record,gamma_2_i];
     Y_i =value(Y_i );
     X_i =value(X_i );
     Wo_i=value(Wo_i);
@@ -121,7 +115,8 @@ for i = 1:max(size(A_i_data))
     Aceta_i_record = [Aceta_i_record, Aceta_i];
     Cceta_i_record = [Cceta_i_record, Cceta_i];
 end
-
+%% gamma
+gamma = sqrt(max(gamma_2_i_record)^2*(1+gamma_1^2))
 %% save to the workspace
 save('controlGain.mat', 'K','Ac_i_record','Bc_i_record','Aceta_i_record',...
-    'Cc_i_record','Dc_i_record','Cceta_i_record');
+    'Cc_i_record','Dc_i_record','Cceta_i_record','Pi_i_record','Gamma_i_record');
